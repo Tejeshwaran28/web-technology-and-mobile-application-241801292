@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Versus — Product Comparison</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          background: '#f8f7fc',
+          foreground: '#1a1824',
+          primary: '#7c3aed',
+          'primary-foreground': '#ffffff',
+          secondary: '#ede9fe',
+          'secondary-foreground': '#1a1824',
+          muted: '#e8e5f3',
+          'muted-foreground': '#6b6680',
+          accent: '#06b6d4',
+          'accent-foreground': '#ffffff',
+          border: '#ddd8ed',
+          card: '#ffffff',
+        },
+        fontFamily: {
+          display: ['system-ui','-apple-system','Segoe UI','Roboto','sans-serif'],
+        },
+      }
+    }
+  }
+</script>
+<style>
+  body { background: #f8f7fc; color: #1a1824; font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .gradient-text { background: linear-gradient(135deg,#7c3aed,#06b6d4,#ec4899); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .gradient-primary { background: linear-gradient(135deg,#7c3aed,#a855f7); }
+  .gradient-hero { background: linear-gradient(135deg,#7c3aed 0%,#06b6d4 50%,#ec4899 100%); }
+  .mesh { background: radial-gradient(at 20% 20%,rgba(124,58,237,.15) 0,transparent 50%),radial-gradient(at 80% 0%,rgba(6,182,212,.15) 0,transparent 50%),radial-gradient(at 80% 80%,rgba(236,72,153,.12) 0,transparent 50%),#f8f7fc; }
+  .glow { box-shadow: 0 20px 60px -15px rgba(124,58,237,.4); }
+  .card-gradient { background: linear-gradient(180deg,#fff 0%,#f5f3ff 100%); }
+  .fade-up { animation: fadeUp .6s ease both; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  .pulse-skeleton { animation: pulse 1.5s cubic-bezier(.4,0,.6,1) infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #c4b5fd; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+// ---- Icons ----
+const Icon = ({ name, className = "w-5 h-5" }) => {
+  React.useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, []);
+  return <i data-lucide={name} className={className} style={{ width: '1em', height: '1em' }} />;
+};
+
+// ---- Mock Data Engine ----
+const PRODUCT_TEMPLATES = {
+  "iPhone": [
+    { title: "Apple iPhone 15 Pro Max", brand: "Apple", price: 1199, rating: 4.8, reviews: 3420, source: "Amazon", img: "https://images.unsplash.com/photo-1696446701796-da61225697cc?w=400&q=80" },
+    { title: "Apple iPhone 15 Pro", brand: "Apple", price: 999, rating: 4.7, reviews: 2890, source: "Flipkart", img: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=400&q=80" },
+    { title: "Apple iPhone 15 Plus", brand: "Apple", price: 899, rating: 4.6, reviews: 1560, source: "Best Buy", img: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=400&q=80" },
+    { title: "Apple iPhone 14 Pro", brand: "Apple", price: 899, rating: 4.7, reviews: 5200, source: "Amazon", img: "https://images.unsplash.com/photo-1678652197831-2d180705cd82?w=400&q=80" },
+  ],
+  "laptop": [
+    { title: "MacBook Air M3 13-inch", brand: "Apple", price: 1099, rating: 4.8, reviews: 1850, source: "Amazon", img: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&q=80" },
+    { title: "Dell XPS 15", brand: "Dell", price: 1399, rating: 4.5, reviews: 980, source: "Flipkart", img: "https://images.unsplash.com/photo-1593642632823-8f78536788c6?w=400&q=80" },
+    { title: "HP Spectre x360", brand: "HP", price: 1249, rating: 4.4, reviews: 760, source: "Best Buy", img: "https://images.unsplash.com/photo-1544731612-de7f96afe55f?w=400&q=80" },
+    { title: "Lenovo ThinkPad X1 Carbon", brand: "Lenovo", price: 1599, rating: 4.6, reviews: 1120, source: "Amazon", img: "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=400&q=80" },
+    { title: "ASUS ROG Zephyrus G14", brand: "ASUS", price: 1499, rating: 4.7, reviews: 2100, source: "Newegg", img: "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=400&q=80" },
+  ],
+  "headphone": [
+    { title: "Sony WH-1000XM5", brand: "Sony", price: 348, rating: 4.7, reviews: 5400, source: "Amazon", img: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=400&q=80" },
+    { title: "Bose QuietComfort Ultra", brand: "Bose", price: 429, rating: 4.6, reviews: 3200, source: "Best Buy", img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80" },
+    { title: "Apple AirPods Max", brand: "Apple", price: 549, rating: 4.5, reviews: 8900, source: "Flipkart", img: "https://images.unsplash.com/photo-1609081219090-a6d81d3085bf?w=400&q=80" },
+    { title: "Sennheiser Momentum 4", brand: "Sennheiser", price: 379, rating: 4.6, reviews: 1800, source: "Amazon", img: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=400&q=80" },
+  ],
+  "TV": [
+    { title: "Samsung 55\" Neo QLED 4K", brand: "Samsung", price: 1299, rating: 4.6, reviews: 420, source: "Amazon", img: "https://images.unsplash.com/photo-1593784991095-a205069470b6?w=400&q=80" },
+    { title: "LG 65\" OLED C4", brand: "LG", price: 1796, rating: 4.8, reviews: 890, source: "Best Buy", img: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&q=80" },
+    { title: "Sony 55\" Bravia XR A80L", brand: "Sony", price: 1398, rating: 4.7, reviews: 650, source: "Amazon", img: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80" },
+  ],
+  "shoe": [
+    { title: "Nike Air Max 270", brand: "Nike", price: 150, rating: 4.5, reviews: 2300, source: "Amazon", img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80" },
+    { title: "Adidas Ultraboost 22", brand: "Adidas", price: 190, rating: 4.6, reviews: 3100, source: "Flipkart", img: "https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?w=400&q=80" },
+    { title: "Puma RS-X", brand: "Puma", price: 110, rating: 4.3, reviews: 890, source: "Amazon", img: "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400&q=80" },
+  ],
+  "vacuum": [
+    { title: "Dyson V15 Detect", brand: "Dyson", price: 749, rating: 4.7, reviews: 4500, source: "Amazon", img: "https://images.unsplash.com/photo-1558317374-a309d8a0d423?w=400&q=80" },
+    { title: "Shark Stratos Cordless", brand: "Shark", price: 399, rating: 4.5, reviews: 2100, source: "Best Buy", img: "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=400&q=80" },
+    { title: "Tineco Pure One S15", brand: "Tineco", price: 499, rating: 4.4, reviews: 980, source: "Amazon", img: "https://images.unsplash.com/photo-1527515637462-cff94ee77c43?w=400&q=80" },
+  ],
+  "default": [
+    { title: "Samsung Galaxy S24 Ultra", brand: "Samsung", price: 1199, rating: 4.7, reviews: 1200, source: "Amazon", img: "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&q=80" },
+    { title: "Google Pixel 8 Pro", brand: "Google", price: 999, rating: 4.6, reviews: 1800, source: "Flipkart", img: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400&q=80" },
+    { title: "OnePlus 12", brand: "OnePlus", price: 799, rating: 4.5, reviews: 900, source: "Amazon", img: "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=400&q=80" },
+    { title: "Xiaomi 14 Ultra", brand: "Xiaomi", price: 899, rating: 4.4, reviews: 670, source: "Best Buy", img: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80" },
+    { title: "Nothing Phone 2", brand: "Nothing", price: 599, rating: 4.3, reviews: 1200, source: "Amazon", img: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400&q=80" },
+    { title: "Realme GT 5 Pro", brand: "Realme", price: 499, rating: 4.2, reviews: 540, source: "Flipkart", img: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80" },
+  ]
+};
+
+function getMockProducts(query) {
+  const q = query.toLowerCase();
+  let pool = [];
+  for (const key in PRODUCT_TEMPLATES) {
+    if (q.includes(key) || key.includes(q.replace(/\s/g, ''))) {
+      pool = PRODUCT_TEMPLATES[key];
+      break;
+    }
+  }
+  if (pool.length === 0) pool = PRODUCT_TEMPLATES["default"];
+  // add some randomization so each search feels slightly different
+  return pool.map((p, i) => ({
+    id: i + 1,
+    title: p.title,
+    brand: p.brand,
+    price: p.price + Math.floor(Math.random() * 50 - 25),
+    rating: { rate: p.rating, count: p.reviews + Math.floor(Math.random() * 200) },
+    category: query.toLowerCase().split(' ')[0] || 'general',
+    description: `Latest ${p.brand} ${query} with top-tier specs, excellent reviews, and competitive pricing from ${p.source}.`,
+    image: p.img,
+    source: p.source,
+  }));
+}
+
+// ---- Supabase real backend attempt ----
+async function searchProductsOnline(query) {
+  const SUPABASE_URL = "https://pmtdcsiwodhipeadyhrg.supabase.co";
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/search-products`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    });
+    if (!res.ok) throw new Error("Backend unavailable");
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return (data.products || []).map((p, i) => ({
+      id: p.id ?? i + 1,
+      title: p.title,
+      brand: p.brand,
+      price: Number(p.price) || 0,
+      description: p.description ?? "",
+      category: (p.category ?? "general").toLowerCase(),
+      image: p.image && /^https?:\/\//.test(p.image) ? p.image : `https://source.unsplash.com/400x400/?${encodeURIComponent(p.title.split(" ").slice(0,3).join(","))}`,
+      rating: { rate: Number(p.rating) || 0, count: Number(p.reviews) || 0 },
+      source: p.source,
+    }));
+  } catch (e) {
+    // fallback to rich mock data
+    console.log("Using offline mock data for demo");
+    return getMockProducts(query);
+  }
+}
+
+function generatePriceHistory(p, months = 7) {
+  const seed = p.id * 9301 + 49297;
+  const data = [];
+  const labels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const now = new Date().getMonth();
+  for (let i = months - 1; i >= 0; i--) {
+    const idx = (now - i + 12) % 12;
+    const noise = (Math.sin(seed + i * 1.7) + 1) / 2;
+    const variance = 0.22;
+    const factor = 1 - variance / 2 + noise * variance;
+    data.push({ month: labels[idx], price: +(p.price * factor).toFixed(2) });
+  }
+  data.push({ month: "Now", price: p.price });
+  return data;
+}
+
+// ---- Components ----
+const ProductCard = ({ product, selected, onToggle }) => (
+  <div className={`group relative rounded-2xl card-gradient p-5 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${selected ? 'border-primary ring-2 ring-primary/30' : 'border-border'}`}>
+    <div className="aspect-square mb-4 flex items-center justify-center overflow-hidden rounded-xl bg-secondary/50 p-4">
+      <img src={product.image} alt={product.title} loading="lazy" className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-110" />
+    </div>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium uppercase tracking-wider text-primary">{product.category}</span>
+        {product.source && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{product.source}</span>}
+      </div>
+      <h3 className="line-clamp-2 min-h-[2.75rem] text-sm font-semibold leading-snug">{product.title}</h3>
+      <div className="flex items-center justify-between pt-1">
+        <span className="text-2xl font-display font-bold gradient-text">${product.price.toFixed(2)}</span>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="text-warning">★</span>
+          <span className="font-medium text-foreground">{product.rating.rate}</span>
+          <span>({product.rating.count})</span>
+        </div>
+      </div>
+      <button onClick={() => onToggle(product)} className={`w-full mt-3 h-10 rounded-xl text-sm font-medium flex items-center justify-center gap-1 transition ${selected ? 'gradient-primary text-white glow' : 'border border-border bg-card hover:border-primary/50'}`}>
+        {selected ? '✓ Selected' : '+ Compare'}
+      </button>
+    </div>
+  </div>
+);
+
+const CompareDrawer = ({ selected, onRemove, onCompare, onClear }) => {
+  if (selected.length === 0) return null;
+  return (
+    <div className="fixed bottom-4 left-1/2 z-40 w-[min(95vw,900px)] -translate-x-1/2 rounded-2xl border border-border bg-card/95 p-4 glow backdrop-blur-xl fade-up">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 overflow-x-auto">
+          {selected.map((p) => (
+            <div key={p.id} className="relative flex-shrink-0">
+              <div className="h-14 w-14 rounded-lg bg-secondary p-1.5"><img src={p.image} alt="" className="h-full w-full object-contain" /></div>
+              <button onClick={() => onRemove(p)} className="absolute -right-1.5 -top-1.5 rounded-full bg-red-500 text-white p-0.5 hover:scale-110 transition text-xs w-5 h-5 flex items-center justify-center">×</button>
+            </div>
+          ))}
+          <span className="text-sm text-muted-foreground whitespace-nowrap px-2">{selected.length}/4 selected</span>
+        </div>
+        <div className="flex gap-2 flex-shrink-0">
+          <button onClick={onClear} className="px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-secondary transition">Clear</button>
+          <button onClick={onCompare} disabled={selected.length < 2} className={`px-5 py-2 rounded-xl text-sm font-medium text-white gradient-primary glow disabled:opacity-40 disabled:shadow-none flex items-center gap-1`}>
+            ⇄ Compare ({selected.length})
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CompareModal = ({ open, onOpenChange, products }) => {
+  if (!open) return null;
+  const best = products.reduce((a, b) => (a.rating.rate / a.price > b.rating.rate / b.price ? a : b), products[0]);
+  const specs = [
+    { label: "Price", key: "price", fmt: (v) => "$" + v.toFixed(2) },
+    { label: "Rating", key: "rating", fmt: (v) => `${v.rate} ★ (${v.count} reviews)` },
+    { label: "Category", key: "category", fmt: (v) => v },
+    { label: "Brand", key: "brand", fmt: (v) => v || "N/A" },
+    { label: "Source", key: "source", fmt: (v) => v || "N/A" },
+  ];
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => onOpenChange(false)}>
+      <div className="bg-card rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-auto p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-display font-bold">Side-by-Side Comparison</h2>
+          <button onClick={() => onOpenChange(false)} className="w-8 h-8 rounded-full hover:bg-secondary flex items-center justify-center text-xl">×</button>
+        </div>
+
+        {/* Best Value Badge */}
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 flex items-center gap-3">
+          <span className="text-2xl">🏆</span>
+          <div>
+            <p className="font-semibold text-green-800">Best Value Pick</p>
+            <p className="text-sm text-green-700"><strong>{best.title}</strong> — highest rating per dollar spent.</p>
+          </div>
+        </div>
+
+        {/* Spec Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left p-3 text-muted-foreground font-medium">Spec</th>
+                {products.map((p) => (
+                  <th key={p.id} className="p-3 min-w-[160px]">
+                    <div className="flex flex-col items-center gap-2">
+                      <img src={p.image} alt="" className="h-16 w-16 object-contain" />
+                      <span className="font-semibold text-center leading-tight">{p.title}</span>
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {specs.map((s) => (
+                <tr key={s.label} className="border-b border-border/60">
+                  <td className="p-3 font-medium text-muted-foreground">{s.label}</td>
+                  {products.map((p) => (
+                    <td key={p.id} className={`p-3 text-center font-medium ${p.id === best.id ? 'text-primary bg-primary/5' : ''}`}>{s.fmt(p[s.key])}</td>
+                  ))}
+                </tr>
+              ))}
+              {/* Price History Mini-Chart */}
+              <tr>
+                <td className="p-3 font-medium text-muted-foreground align-top">Price History</td>
+                {products.map((p) => {
+                  const hist = generatePriceHistory(p);
+                  const minP = Math.min(...hist.map((h) => h.price));
+                  const maxP = Math.max(...hist.map((h) => h.price));
+                  const range = maxP - minP || 1;
+                  return (
+                    <td key={p.id} className="p-3">
+                      <div className="flex items-end gap-1 h-24">
+                        {hist.map((h, i) => {
+                          const hPct = ((h.price - minP) / range) * 60 + 20;
+                          return (
+                            <div key={i} className="flex flex-col items-center flex-1" title={`${h.month}: $${h.price}`}>
+                              <div className="w-full bg-primary/20 rounded-t" style={{ height: hPct + 'px' }} />
+                              <span className="text-[9px] text-muted-foreground mt-1">{h.month}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ---- Main Page ----
+const SUGGESTIONS = ["iPhone 15", "Sony WH-1000XM5", "MacBook Air M3", "Samsung 4K TV", "Nike Air Max", "Dyson V15"];
+
+const App = () => {
+  const [query, setQuery] = useState("");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [category, setCategory] = useState("all");
+  const [selected, setSelected] = useState([]);
+  const [showCompare, setShowCompare] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const runSearch = async (q) => {
+    if (!q.trim()) return;
+    setLoading(true);
+    setHasSearched(true);
+    setCategory("all");
+    setErrorMsg("");
+    try {
+      const results = await searchProductsOnline(q);
+      setProducts(results);
+      if (results.length === 0) setErrorMsg("No products found. Try another search.");
+    } catch (e) {
+      setErrorMsg(e.message || "Search failed");
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const categories = useMemo(() => ["all", ...Array.from(new Set(products.map((p) => p.category)))], [products]);
+  const filtered = useMemo(() => (category === "all" ? products : products.filter((p) => p.category === category)), [products, category]);
+
+  const toggle = (p) => {
+    setSelected((prev) => {
+      if (prev.find((x) => x.id === p.id)) return prev.filter((x) => x.id !== p.id);
+      if (prev.length >= 4) { setErrorMsg("You can compare up to 4 products"); return prev; }
+      return [...prev, p];
+    });
+  };
+
+  React.useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
+  React.useEffect(() => { if (errorMsg) { const t = setTimeout(() => setErrorMsg(""), 3000); return () => clearTimeout(t); } }, [errorMsg]);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="relative overflow-hidden mesh">
+        <nav className="max-w-6xl mx-auto flex items-center justify-between px-4 py-5">
+          <div className="flex items-center gap-2">
+            <div className="rounded-xl gradient-primary p-2 glow text-white">
+              <span className="text-lg font-bold">⇄</span>
+            </div>
+            <span className="font-display text-xl font-bold">Versus</span>
+          </div>
+          <div className="hidden sm:flex items-center gap-1 rounded-full border border-border bg-card/50 px-3 py-1.5 text-xs backdrop-blur">
+            <span className="text-primary">✨</span>
+            <span className="text-muted-foreground">AI-powered live product search</span>
+          </div>
+        </nav>
+
+        <div className="max-w-6xl mx-auto px-4 py-16 md:py-20 text-center relative">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary mb-6 fade-up">
+            <span>⚡</span> Search the entire web · Compare in one click
+          </div>
+          <h1 className="font-display text-5xl md:text-7xl font-bold leading-[1.05] tracking-tight fade-up">
+            Find the <span className="gradient-text">best deal</span><br />from any store.
+          </h1>
+          <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto fade-up">
+            Search any product across Amazon, Flipkart and more. Pick up to 4, see side-by-side specs and best-value picks.
+          </p>
+
+          <form onSubmit={(e) => { e.preventDefault(); runSearch(query); }} className="mt-10 max-w-2xl mx-auto relative fade-up">
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground">🔍</span>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search any product: iPhone 15, gaming laptop, headphones..."
+              className="w-full h-16 pl-14 pr-32 rounded-2xl border-2 border-border text-base shadow-lg bg-card focus:border-primary focus:outline-none transition"
+            />
+            <button
+              type="submit"
+              disabled={loading || !query.trim()}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-12 px-6 rounded-xl text-white font-medium gradient-primary glow disabled:opacity-40 disabled:shadow-none transition"
+            >
+              {loading ? <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Search"}
+            </button>
+          </form>
+
+          {errorMsg && (
+            <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl py-2 px-4 inline-block">{errorMsg}</div>
+          )}
+
+          {!hasSearched && (
+            <div className="mt-6 flex flex-wrap justify-center gap-2 max-w-xl mx-auto">
+              <span className="text-xs text-muted-foreground self-center">Try:</span>
+              {SUGGESTIONS.map((s) => (
+                <button key={s} onClick={() => { setQuery(s); runSearch(s); }} className="px-3 py-1.5 rounded-full text-xs font-medium bg-card border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition">
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {hasSearched && categories.length > 1 && (
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              {categories.map((c) => (
+                <button key={c} onClick={() => setCategory(c)} className={`px-4 py-1.5 rounded-full text-xs font-medium capitalize transition ${category === c ? 'gradient-primary text-white glow' : 'bg-card border border-border text-muted-foreground hover:border-primary/50'}`}>
+                  {c.replace(/-/g, " ")}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 pb-32 pt-8">
+        {hasSearched && (
+          <div className="flex items-end justify-between mb-6">
+            <div>
+              <h2 className="font-display text-2xl font-bold">{loading ? "Searching..." : `${filtered.length} result${filtered.length !== 1 ? "s" : ""}`}</h2>
+              <p className="text-sm text-muted-foreground">{selected.length > 0 ? `${selected.length} selected` : "Tap Compare on any product"}</p>
+            </div>
+            {selected.length >= 2 && (
+              <button onClick={() => setShowCompare(true)} className="px-5 py-2.5 rounded-xl text-sm font-medium text-white gradient-primary glow">
+                View Comparison
+              </button>
+            )}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="aspect-[3/4] rounded-2xl bg-muted pulse-skeleton" />
+            ))}
+          </div>
+        ) : !hasSearched ? (
+          <div className="text-center py-20 text-muted-foreground">
+            <div className="text-5xl mb-4 opacity-30">🔍</div>
+            <p>Search any product to start comparing.</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-muted-foreground">No products found. Try a different search.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {filtered.map((p) => (
+              <ProductCard key={p.id} product={p} selected={!!selected.find((x) => x.id === p.id)} onToggle={toggle} />
+            ))}
+          </div>
+        )}
+      </main>
+
+      <CompareDrawer selected={selected} onRemove={toggle} onClear={() => setSelected([])} onCompare={() => setShowCompare(true)} />
+      <CompareModal open={showCompare} onOpenChange={setShowCompare} products={selected} />
+
+      <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
+        Built with ♥ — Web Technology project · Live search powered by AI
+      </footer>
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
